@@ -1,0 +1,32 @@
+diff --git a/node_modules/expo-image/ios/ExpoImage.podspec b/node_modules/expo-image/ios/ExpoImage.podspec
+index 7ad818a..f98c0b5 100644
+--- a/node_modules/expo-image/ios/ExpoImage.podspec
++++ b/node_modules/expo-image/ios/ExpoImage.podspec
+@@ -18,7 +18,6 @@ Pod::Spec.new do |s|
+   s.dependency 'ExpoModulesCore'
+   s.dependency 'SDWebImage', '~> 5.15.0'
+   s.dependency 'SDWebImageWebPCoder', '~> 0.9.1'
+-  s.dependency 'SDWebImageAVIFCoder', '~> 0.9.4'
+   s.dependency 'SDWebImageSVGCoder', '~> 1.6.1'
+ 
+   # Swift/Objective-C compatibility
+diff --git a/node_modules/expo-image/ios/ImageModule.swift b/node_modules/expo-image/ios/ImageModule.swift
+index 04f2dae..f38b947 100644
+--- a/node_modules/expo-image/ios/ImageModule.swift
++++ b/node_modules/expo-image/ios/ImageModule.swift
+@@ -3,7 +3,6 @@
+ import ExpoModulesCore
+ import SDWebImage
+ import SDWebImageWebPCoder
+-import SDWebImageAVIFCoder
+ import SDWebImageSVGCoder
+ 
+ public final class ImageModule: Module {
+@@ -114,7 +113,6 @@ public final class ImageModule: Module {
+       // This coder is much slower, but it's the only one that works in iOS 13
+       SDImageCodersManager.shared.addCoder(SDImageWebPCoder.shared)
+     }
+-    SDImageCodersManager.shared.addCoder(SDImageAVIFCoder.shared)
+     SDImageCodersManager.shared.addCoder(SDImageSVGCoder.shared)
+     SDImageCodersManager.shared.addCoder(SDImageHEICCoder.shared)
+   }

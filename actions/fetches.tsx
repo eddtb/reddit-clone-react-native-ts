@@ -2,12 +2,6 @@ import { PostDataType, CommentType } from "../constants/types";
 import { QueryFunctionContext } from "@tanstack/react-query";
 import { formatPosts, formatReplies } from "./methods";
 
-// Reddit's edge now returns 403 (an HTML block page, which fails to parse with
-// "Unexpected token: <") for unauthenticated requests to the public
-// www.reddit.com/*.json endpoints unless the request looks like a real browser.
-// An "API-style" User-Agent gets blocked, so we send a desktop-browser
-// User-Agent and the headers a browser typically includes. (For heavier use the
-// proper route is OAuth via oauth.reddit.com, which needs a registered app.)
 const REDDIT_HEADERS = {
     "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -16,19 +10,52 @@ const REDDIT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 };
 
-// Fetch a Reddit URL and parse it as JSON, surfacing a clear error if Reddit
-// returns something that isn't JSON (e.g. a rate-limit/block HTML page).
-const fetchRedditJson = async (url: string): Promise<any> => {
-    const response = await fetch(url, { headers: REDDIT_HEADERS });
-    const body = await response.text();
+// Reddit now serves a 403 HTML block page to anonymous requests hitting its
+// public *.json endpoints, and OAuth app registration is currently gated. As a
+// no-account workaround we route the request through read-only proxies, which
+// fetch the URL from their own server (a different IP) and hand back the body.
+// We try a direct request first, then fall back to each proxy in turn.
+const PROXIES: Array<(url: string) => string> = [
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+];
+
+const looksLikeJson = (text: string): boolean => {
+    const trimmed = text.trim();
+    return trimmed.startsWith("{") || trimmed.startsWith("[");
+};
+
+const fetchWithTimeout = async (url: string, ms = 12000): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
     try {
-        return JSON.parse(body);
-    } catch {
-        throw new Error(
-            `Reddit returned a non-JSON response (HTTP ${response.status}). ` +
-            `This usually means the request was rate-limited or blocked — try again shortly.`
-        );
+        return await fetch(url, { headers: REDDIT_HEADERS, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
     }
+};
+
+// Fetch a Reddit URL as JSON, trying the URL directly and then via proxies.
+// Throws a clear error if nothing returns parseable JSON.
+const fetchRedditJson = async (url: string): Promise<any> => {
+    const targets = [url, ...PROXIES.map((proxy) => proxy(url))];
+    let lastStatus: number | string = "error";
+    for (const target of targets) {
+        try {
+            const response = await fetchWithTimeout(target);
+            lastStatus = response.status;
+            const body = await response.text();
+            if (response.ok && looksLikeJson(body)) {
+                return JSON.parse(body);
+            }
+        } catch {
+            // timeout or network error on this target — fall through to the next
+        }
+    }
+    throw new Error(
+        `Couldn't load Reddit data (last HTTP ${lastStatus}). Reddit is blocking ` +
+        `anonymous access and the fallback proxies didn't return JSON either.`
+    );
 };
 
 export const fetchPosts = async ({ pageParam }: QueryFunctionContext): Promise<PostDataType> => {

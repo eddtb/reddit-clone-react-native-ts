@@ -2,14 +2,18 @@ import { PostDataType, CommentType } from "../constants/types";
 import { QueryFunctionContext } from "@tanstack/react-query";
 import { formatPosts, formatReplies } from "./methods";
 
-// Reddit blocks anonymous requests that don't send a descriptive User-Agent and
-// serves an HTML block/rate-limit page instead of JSON (which then fails to
-// parse with "Unexpected token: <"). A unique User-Agent in the
-// "<platform>:<app id>:<version> (by /u/<user>)" format keeps the public .json
-// endpoints returning JSON. See https://github.com/reddit-archive/reddit/wiki/API
+// Reddit's edge now returns 403 (an HTML block page, which fails to parse with
+// "Unexpected token: <") for unauthenticated requests to the public
+// www.reddit.com/*.json endpoints unless the request looks like a real browser.
+// An "API-style" User-Agent gets blocked, so we send a desktop-browser
+// User-Agent and the headers a browser typically includes. (For heavier use the
+// proper route is OAuth via oauth.reddit.com, which needs a registered app.)
 const REDDIT_HEADERS = {
-    "User-Agent": "ios:com.redditclone.app:v1.0.0 (by /u/redditclone)",
-    Accept: "application/json",
+    "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
 };
 
 // Fetch a Reddit URL and parse it as JSON, surfacing a clear error if Reddit

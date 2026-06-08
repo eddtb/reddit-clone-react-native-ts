@@ -1,6 +1,7 @@
 import { PostDataType, CommentType } from "../constants/types";
 import { QueryFunctionContext } from "@tanstack/react-query";
 import { formatPosts, formatReplies } from "./methods";
+import { SAMPLE_POSTS, SAMPLE_COMMENTS } from "./sampleData";
 
 const REDDIT_HEADERS = {
     "User-Agent":
@@ -25,7 +26,7 @@ const looksLikeJson = (text: string): boolean => {
     return trimmed.startsWith("{") || trimmed.startsWith("[");
 };
 
-const fetchWithTimeout = async (url: string, ms = 12000): Promise<Response> => {
+const fetchWithTimeout = async (url: string, ms = 8000): Promise<Response> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), ms);
     try {
@@ -60,14 +61,22 @@ const fetchRedditJson = async (url: string): Promise<any> => {
 
 export const fetchPosts = async ({ pageParam }: QueryFunctionContext): Promise<PostDataType> => {
     const after = pageParam ? `after=${pageParam}&` : "";
-    const json = await fetchRedditJson(`https://www.reddit.com/r/all/hot.json?${after}sr_detail=1`);
-    const posts = formatPosts(json);
-    return { posts, nextPageToken: json.data.after };
+    try {
+        const json = await fetchRedditJson(`https://www.reddit.com/r/all/hot.json?${after}sr_detail=1`);
+        return { posts: formatPosts(json), nextPageToken: json.data.after };
+    } catch (error) {
+        console.log("[reddit] live request blocked, showing bundled sample posts —", (error as Error).message);
+        return { posts: formatPosts(SAMPLE_POSTS), nextPageToken: SAMPLE_POSTS.data.after };
+    }
 };
 
 
 export const fetchComments = async ( query: string[] | string ):  Promise<CommentType[]> => {
     const url = typeof query === 'string' ? query : query.join("/");
-    const json = await fetchRedditJson(`https://www.reddit.com/${url}.json?sr_detail=1`);
-    return formatReplies(json[1]);
+    try {
+        const json = await fetchRedditJson(`https://www.reddit.com/${url}.json?sr_detail=1`);
+        return formatReplies(json[1]);
+    } catch {
+        return formatReplies(SAMPLE_COMMENTS[1]);
+    }
 };

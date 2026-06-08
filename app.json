@@ -16,7 +16,8 @@
       "**/*"
     ],
     "plugins": [
-      "./plugins/withBoostUnaryFunctionFix"
+      "./plugins/withBoostUnaryFunctionFix",
+      "./plugins/withRemoveAvifCoder"
     ],
     "ios": {
       "supportsTablet": true

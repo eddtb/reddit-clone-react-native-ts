@@ -3,7 +3,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@tanstack/react-query": "^4.26.1",
@@ -29,7 +30,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.19.3",
-    "@babel/plugin-proposal-export-namespace-from": "^7.18.9"
+    "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+    "patch-package": "^8.0.1"
   },
   "resolutions": {
     "metro": "^0.73.7",

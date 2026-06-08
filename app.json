@@ -15,6 +15,9 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "plugins": [
+      "./plugins/withBoostUnaryFunctionFix"
+    ],
     "ios": {
       "supportsTablet": true
     },

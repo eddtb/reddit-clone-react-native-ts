@@ -3,80 +3,27 @@ import { QueryFunctionContext } from "@tanstack/react-query";
 import { formatPosts, formatReplies } from "./methods";
 import { SAMPLE_POSTS, SAMPLE_COMMENTS } from "./sampleData";
 
-const REDDIT_HEADERS = {
-    "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    Accept: "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
+// Reddit blocks anonymous access to its public *.json endpoints (HTTP 403), and
+// creating an OAuth app to authenticate is currently gated behind Reddit's
+// Responsible Builder Policy, so there is no no-account way to pull live posts.
+// The app therefore runs on bundled, Reddit-shaped sample data (see sampleData),
+// which flows through formatPosts / formatReplies exactly like a real response.
+//
+// To go live later: register an OAuth "installed app" to get a client ID, request
+// an app-only token from https://www.reddit.com/api/v1/access_token, then fetch
+// r/all/hot from https://oauth.reddit.com with that bearer token here. Nothing
+// else in the app needs to change — the formatters and screens stay the same.
+
+// Param is kept (and ignored) so the signature stays compatible with the
+// react-query queryFn call site in queries.tsx.
+export const fetchPosts = async (_context: QueryFunctionContext): Promise<PostDataType> => {
+    // The sample set is a single page; nextPageToken stays null so react-query's
+    // getNextPageParam reports no further pages and pagination stops cleanly.
+    return { posts: formatPosts(SAMPLE_POSTS), nextPageToken: SAMPLE_POSTS.data.after };
 };
 
-// Reddit now serves a 403 HTML block page to anonymous requests hitting its
-// public *.json endpoints, and OAuth app registration is currently gated. As a
-// no-account workaround we route the request through read-only proxies, which
-// fetch the URL from their own server (a different IP) and hand back the body.
-// We try a direct request first, then fall back to each proxy in turn.
-const PROXIES: Array<(url: string) => string> = [
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-];
-
-const looksLikeJson = (text: string): boolean => {
-    const trimmed = text.trim();
-    return trimmed.startsWith("{") || trimmed.startsWith("[");
-};
-
-const fetchWithTimeout = async (url: string, ms = 8000): Promise<Response> => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ms);
-    try {
-        return await fetch(url, { headers: REDDIT_HEADERS, signal: controller.signal });
-    } finally {
-        clearTimeout(timer);
-    }
-};
-
-// Fetch a Reddit URL as JSON, trying the URL directly and then via proxies.
-// Throws a clear error if nothing returns parseable JSON.
-const fetchRedditJson = async (url: string): Promise<any> => {
-    const targets = [url, ...PROXIES.map((proxy) => proxy(url))];
-    let lastStatus: number | string = "error";
-    for (const target of targets) {
-        try {
-            const response = await fetchWithTimeout(target);
-            lastStatus = response.status;
-            const body = await response.text();
-            if (response.ok && looksLikeJson(body)) {
-                return JSON.parse(body);
-            }
-        } catch {
-            // timeout or network error on this target — fall through to the next
-        }
-    }
-    throw new Error(
-        `Couldn't load Reddit data (last HTTP ${lastStatus}). Reddit is blocking ` +
-        `anonymous access and the fallback proxies didn't return JSON either.`
-    );
-};
-
-export const fetchPosts = async ({ pageParam }: QueryFunctionContext): Promise<PostDataType> => {
-    const after = pageParam ? `after=${pageParam}&` : "";
-    try {
-        const json = await fetchRedditJson(`https://www.reddit.com/r/all/hot.json?${after}sr_detail=1`);
-        return { posts: formatPosts(json), nextPageToken: json.data.after };
-    } catch (error) {
-        console.log("[reddit] live request blocked, showing bundled sample posts —", (error as Error).message);
-        return { posts: formatPosts(SAMPLE_POSTS), nextPageToken: SAMPLE_POSTS.data.after };
-    }
-};
-
-
-export const fetchComments = async ( query: string[] | string ):  Promise<CommentType[]> => {
-    const url = typeof query === 'string' ? query : query.join("/");
-    try {
-        const json = await fetchRedditJson(`https://www.reddit.com/${url}.json?sr_detail=1`);
-        return formatReplies(json[1]);
-    } catch {
-        return formatReplies(SAMPLE_COMMENTS[1]);
-    }
+export const fetchComments = async (_query: string[] | string): Promise<CommentType[]> => {
+    // Reddit's comments endpoint returns [postListing, commentsListing]; the
+    // comments live at index [1], matching the shape of the sample data.
+    return formatReplies(SAMPLE_COMMENTS[1]);
 };

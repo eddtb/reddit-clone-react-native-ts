@@ -1,12 +1,14 @@
 import { ActivityIndicator } from "react-native";
-import colors from "../constants/colors";
+
 import StyledView from "./StyledView";
+import { usePalette } from "../constants/theme";
 
+export default function Spinner() {
+    const palette = usePalette();
 
-export default function Spinner () {
     return (
-        <StyledView style={{marginVertical: 20}}>
-            <ActivityIndicator size={"large"} color={colors.red} />
+        <StyledView style={{ marginVertical: 20 }}>
+            <ActivityIndicator size="large" color={palette.accent} />
         </StyledView>
     );
-};
+}

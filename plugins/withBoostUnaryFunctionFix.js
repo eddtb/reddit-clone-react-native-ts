@@ -1,6 +1,6 @@
-const { withDangerousMod } = require('@expo/config-plugins');
-const fs = require('fs');
-const path = require('path');
+const { withDangerousMod } = require("@expo/config-plugins");
+const fs = require("fs");
+const path = require("path");
 
 /**
  * Boost 1.76.0 (pinned by React Native 0.71.x) declares
@@ -18,39 +18,36 @@ const path = require('path');
  * result_type typedefs, which RN/Folly don't rely on.
  */
 const PATCH_SNIPPET = [
-  '',
-  '    # Injected by withBoostUnaryFunctionFix: boost 1.76 uses std::unary_function,',
-  '    # which modern C++ toolchains have removed. Patch the header post-download.',
-  "    boost_hash = File.join(installer.sandbox.root, 'boost', 'boost', 'container_hash', 'hash.hpp')",
-  '    if File.exist?(boost_hash)',
-  '      boost_contents = File.read(boost_hash)',
-  "      boost_patched = boost_contents.gsub('struct hash_base : std::unary_function<T, std::size_t> {};', 'struct hash_base {};')",
-  '      File.write(boost_hash, boost_patched) if boost_patched != boost_contents',
-  '    end',
-].join('\n');
+    "",
+    "    # Injected by withBoostUnaryFunctionFix: boost 1.76 uses std::unary_function,",
+    "    # which modern C++ toolchains have removed. Patch the header post-download.",
+    "    boost_hash = File.join(installer.sandbox.root, 'boost', 'boost', 'container_hash', 'hash.hpp')",
+    "    if File.exist?(boost_hash)",
+    "      boost_contents = File.read(boost_hash)",
+    "      boost_patched = boost_contents.gsub('struct hash_base : std::unary_function<T, std::size_t> {};', 'struct hash_base {};')",
+    "      File.write(boost_hash, boost_patched) if boost_patched != boost_contents",
+    "    end",
+].join("\n");
 
 const withBoostUnaryFunctionFix = (config) => {
-  return withDangerousMod(config, [
-    'ios',
-    (cfg) => {
-      const podfilePath = path.join(
-        cfg.modRequest.platformProjectRoot,
-        'Podfile'
-      );
-      let contents = fs.readFileSync(podfilePath, 'utf8');
+    return withDangerousMod(config, [
+        "ios",
+        (cfg) => {
+            const podfilePath = path.join(cfg.modRequest.platformProjectRoot, "Podfile");
+            let contents = fs.readFileSync(podfilePath, "utf8");
 
-      // Idempotent: skip if we've already injected the patch.
-      if (!contents.includes('withBoostUnaryFunctionFix')) {
-        contents = contents.replace(
-          /post_install do \|installer\|/,
-          (match) => `${match}\n${PATCH_SNIPPET}`
-        );
-        fs.writeFileSync(podfilePath, contents);
-      }
+            // Idempotent: skip if we've already injected the patch.
+            if (!contents.includes("withBoostUnaryFunctionFix")) {
+                contents = contents.replace(
+                    /post_install do \|installer\|/,
+                    (match) => `${match}\n${PATCH_SNIPPET}`
+                );
+                fs.writeFileSync(podfilePath, contents);
+            }
 
-      return cfg;
-    },
-  ]);
+            return cfg;
+        },
+    ]);
 };
 
 module.exports = withBoostUnaryFunctionFix;

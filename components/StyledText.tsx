@@ -1,27 +1,30 @@
 import { StyleSheet, Text, TextProps } from "react-native";
-import colors from "../constants/colors";
 
+import { usePalette } from "../constants/theme";
 
 interface StyledTextProps extends TextProps {
-    light?: boolean,
-    large?: boolean, 
-    small?: boolean,
-};
+    light?: boolean;
+    small?: boolean;
+}
 
+export default function StyledText({ light, small, style, ...rest }: StyledTextProps) {
+    const palette = usePalette();
 
-export function StyledText(props: StyledTextProps ) {
-    return <Text {...props} style={[styles.main({light: props.light, small: props.small}), props.style]} />;
-};
+    return (
+        <Text
+            {...rest}
+            style={[
+                styles.base,
+                { fontSize: small ? 12 : 15, color: light ? palette.textSecondary : palette.text },
+                style,
+            ]}
+        />
+    );
+}
 
-
-export default StyledText;
-
-
-const styles = StyleSheet.create<any>({
-    main: ({light, small}: StyledTextProps ) => ({
-        fontSize: small ? 12 : 15,
+const styles = StyleSheet.create({
+    base: {
         lineHeight: 21,
-        fontFamily: 'Varela',
-        color: light ? colors.grey : colors.dark
-    }),
+        fontFamily: "Varela",
+    },
 });

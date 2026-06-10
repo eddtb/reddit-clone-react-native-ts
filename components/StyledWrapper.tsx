@@ -1,21 +1,21 @@
-import { StyleSheet, View, ViewProps } from "react-native";
-import colors from "../constants/colors";
+import { View, ViewProps } from "react-native";
+
+import { usePalette } from "../constants/theme";
 
 interface StyledWrapperProps extends ViewProps {
-    gap?: number
-};
+    gap?: number;
+}
 
+export default function StyledWrapper({ gap, style, ...rest }: StyledWrapperProps) {
+    const palette = usePalette();
 
-export default function StyledWrapper(props: StyledWrapperProps ) {
-    return <View {...props} style={[styles.wrapper({gap: props.gap}), props.style]} />;
-};
-
-
-const styles = StyleSheet.create<any>({
-    wrapper: ({gap}: StyledWrapperProps ) => ({
-        backgroundColor: colors.white, 
-        padding: 10,
-        marginTop: 20, 
-        rowGap: gap ?? 0
-    })
-});
+    return (
+        <View
+            {...rest}
+            style={[
+                { backgroundColor: palette.surface, padding: 10, marginTop: 20, rowGap: gap ?? 0 },
+                style,
+            ]}
+        />
+    );
+}
